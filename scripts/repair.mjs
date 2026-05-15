@@ -1,0 +1,75 @@
+import fs from "fs";
+
+const files = [
+  "js/dom-kit.js",
+  "js/variant-engine.js",
+  "js/solver-engine.js",
+  "js/ui-shell.js",
+  "js/opener-benchmark.js",
+  "js/odds-panel.js",
+];
+
+const fixes = [
+  ["all_curatedSolutions", "all_common_words"],
+  ["curatedSolutions", "common_words"],
+  ["masterLexicon", "big_list"],
+  ["getElementsByClassName('poolMode')", "getElementsByClassName('wordbank')"],
+  ["setWordbank()", "applyPoolMode()"],
+  ["setWordbank", "applyPoolMode"],
+  ["clearGrids()", "clearBoardGrids()"],
+  ["clearGrids", "clearBoardGrids"],
+  ["setMaxGuesses()", "seedGuessLimit()"],
+  ["setMaxGuesses", "seedGuessLimit"],
+  ["createElement", "el"],
+  ["clearHTML", "wipeNode"],
+  ["setHTML", "paintNode"],
+  ["clearValue", "resetField"],
+  ["combineLists", "mergeUnique"],
+  ["pluralOrSingle", "pluralize"],
+  ["decimalToPercent", "toPercent"],
+  ["replaceAt", "spliceChar"],
+  ["update()", "refreshAnalysis()"],
+  ["update();", "refreshAnalysis();"],
+  ["guessesMadeSoFar()", "playedTurnCount()"],
+  ["guessesMadeSoFar", "playedTurnCount"],
+  ["numberOfGuessesMadeIs", "turnCountEquals"],
+  ["getWord(", "readTurnWord("],
+  ["getPotentialGuessesAndAnswers", "assemblePools"],
+  ["removeUsedGuesses", "stripPlayedWords"],
+  ["uniqueWordsFrom", "dedupeWords"],
+  ["dontNeedToCheck", "skipHeavyRanking"],
+  ["separateListByLikelihood", "splitByLikelihood"],
+  ["initialGuesses", "buildGuessPool"],
+  ["twoAnswersLeft", "onlyTwoSolutionsLeft"],
+  ["getUnfoundAnswers", "findLoneCandidates"],
+  ["updateLists", "paintSuggestionPanels"],
+  ["timeToShowFinalOptions", "shouldShowDuel"],
+  ["writeBestGuessList", "formatRankedGuesses"],
+  ["getDataFor", "describeGuessScore"],
+  ["notFullyTested", "isPartialScore"],
+  ["createListItem", "buildSuggestionRow"],
+  ["updateHeaders", "paintPoolHeaders"],
+  ["createAnswerDropdown", "attachPoolExpanders"],
+  ["addToSlides", "injectSuggestionBlock"],
+  ["removeLastRow", "popLastTurn"],
+  ["filter.addEventListener", "rankBtn.addEventListener"],
+  ["calculateProbabilities", "renderOddsPanel"],
+  ["hideProbabilities", "clearOddsPanel"],
+  ["setupTest", "launchBenchmark"],
+  ["testStartingWords", "runOpenerBenchmark"],
+  ["engine-type", "bot-type"],
+  ["bot_type", "bot_type"],
+  ["Missed guessLexicon", "Missed words"],
+  [" guessLexicon.", " words."],
+  [" guessLexicon with", " words with"],
+  ["of guessLexicon and", "of words and"],
+  ["document.getElementById('engine-type')", "document.getElementById('bot-type')"],
+  ["function refreshAnalysis", "function refreshAnalysis"],
+];
+
+for (const file of files) {
+  let code = fs.readFileSync(file, "utf8");
+  for (const [a, b] of fixes) code = code.split(a).join(b);
+  fs.writeFileSync(file, code);
+  console.log("repaired", file);
+}

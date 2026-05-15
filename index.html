@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="description" content="Wordle Bot — free Wordle solver and word assistant. Enter your clues, get ranked next guesses, and narrow remaining answers.">
+    <meta name="keywords" content="wordle solver, wordle helper, wordle bot, word assistant, best wordle guesses, wordle answer finder">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Wordle Bot | Wordle Solver &amp; Helper">
+    <meta property="og:description" content="Free Wordle solver and helper. Enter your guesses, match tile colors, and get ranked next words plus remaining answers.">
+    <meta property="og:type" content="website">
+    <title>Wordle Bot | Wordle Solver &amp; Helper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/lexgrid.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="word_lists/guess-dictionary.js"></script>
+    <script src="word_lists/solution-pools.js"></script>
+    <script src="word_lists/wordle-answers.js"></script>
+    <script src="word_lists/wordle-guesses.js"></script>
+    <script src="word_lists/opener-rankings.js"></script>
+    <script src="js/dom-utils.js"></script>
+    <script src="js/game-rules.js"></script>
+    <script src="js/guess-analyzer.js"></script>
+    <script src="js/starter-word-benchmark.js"></script>
+    <script src="js/app-ui.js"></script>
+    <script src="js/probability-panel.js"></script>
+</head>
+<body>
+    <div id="overlay-backdrop" class="overlay-backdrop" hidden aria-hidden="true"></div>
+
+    <div id="help-modal" class="info screen overlay-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" aria-hidden="true">
+        <header class="overlay-header">
+            <h2 id="help-title">How Wordle Bot works</h2>
+            <button type="button" class="modal-close info-close" aria-label="Close help">×</button>
+        </header>
+        <div class="overlay-body help-body">
+            <p>Enter your last guess and match the tile colors to Wordle. Tap <strong>Best next guess</strong> for recommendations and remaining answer lists.</p>
+            <h3 class="mini">After each guess you should see something like this:</h3>
+            <div class="row dummy Wordle help-example-row" aria-hidden="true">
+                <button type="button" class="G tile Wordle" data-mark="G" disabled>T</button>
+                <button type="button" class="B tile Wordle" data-mark="B" disabled>R</button>
+                <button type="button" class="Y tile Wordle" data-mark="Y" disabled>A</button>
+                <button type="button" class="B tile Wordle" data-mark="B" disabled>I</button>
+                <button type="button" class="B tile Wordle" data-mark="B" disabled>N</button>
+            </div>
+            <p class="description">T is in the correct position, A is in the word but not in the correct position, and R, I, and N are not in the word.</p>
+            <ul class="word-list dummy help-example-list">
+                <li><div class="suggestion">1. <span class="click">BLOKE</span></div><div class="score">2.188 guesses left</div></li>
+                <li><div class="suggestion">2. <span class="click">YOLKS</span></div><div class="score">2.250 guesses left</div></li>
+                <li><div class="suggestion">3. <span class="click">KOELS</span></div><div class="score">2.250 guesses left</div></li>
+                <li><div class="suggestion">4. <span class="click">KYLOE</span></div><div class="score">2.250 guesses left</div></li>
+            </ul>
+            <p>This means the best guess from this point would be BLOKE, and that you have an average of 2.188 guesses left. If you see:</p>
+            <ul class="word-list dummy">
+                <li><div class="suggestion">1. <span class="click">BLOKE</span></div><div class="score">96.77% solve rate</div></li>
+            </ul>
+            <p>That means BLOKE will only solve 96.77% of the remaining possible answers within 6 guesses. Generally speaking, you should only see this if you're playing on hard mode.</p>
+            <p>Want to see how good your starting word is? Open <strong>Benchmark</strong> in the header to test an opener against hundreds of random answers.</p>
+        </div>
+    </div>
+
+    <div id="benchmark-modal" class="benchmark screen overlay-panel" role="dialog" aria-modal="true" aria-labelledby="benchmark-title" aria-hidden="true">
+        <header class="overlay-header">
+            <h2 id="benchmark-title">Starter word benchmark</h2>
+            <button type="button" class="modal-close benchmark-close" aria-label="Close benchmark">×</button>
+        </header>
+        <div id="benchmark-body" class="overlay-body benchmark-body"></div>
+    </div>
+
+    <div id="settings-modal" class="settings screen overlay-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true">
+        <header class="overlay-header">
+            <h2 id="settings-title">Settings</h2>
+            <button type="button" class="modal-close settings-close" aria-label="Close settings">×</button>
+        </header>
+        <div class="overlay-body">
+            <fieldset class="field-block">
+                <legend>Word length</legend>
+                <label class="field-row">
+                    <span>Letters per word</span>
+                    <select id="word-length" name="word-length"></select>
+                </label>
+                <label class="field-row">
+                    <span>Max turns</span>
+                    <select id="max-guesses" name="max-guesses"></select>
+                </label>
+            </fieldset>
+            <fieldset class="field-block">
+                <legend>Solution dictionary</legend>
+                <label class="radio-card">
+                    <input type="checkbox" class="wordbank" id="restricted" checked>
+                    <span><strong>Curated</strong> — Wordle-style answer lists</span>
+                </label>
+                <label class="radio-card">
+                    <input type="checkbox" class="wordbank" id="complete">
+                    <span><strong>Expanded</strong> — includes rarer valid words</span>
+                </label>
+            </fieldset>
+            <fieldset class="field-block">
+                <legend>Game variant</legend>
+                <label class="field-row field-row-full">
+                    <span>Ruleset</span>
+                    <select id="bot-type" name="bot-type">
+                        <option value="Wordle">Wordle</option>
+                        <option value="Antiwordle">Antiwordle</option>
+                        <option value="Xordle">Xordle</option>
+                        <option value="Fibble">Fibble</option>
+                        <option value="Warmle">Warmle</option>
+                        <option value="Hardle">Hardle</option>
+                        <option value="Woodle">Woodle / Word500</option>
+                        <option value="W-Peaks">Wordle Peaks</option>
+                        <option value="Thirdle">Thirdle</option>
+                        <option value="Dordle">Dordle</option>
+                        <option value="Quordle">Quordle</option>
+                        <option value="Octordle">Octordle</option>
+                        <option value="Spotle">Spotle</option>
+                    </select>
+                </label>
+                <p class="extra-settings field-hint"></p>
+            </fieldset>
+        </div>
+    </div>
+
+    <div class="app-frame">
+        <div id="container" class="app-grid">
+            <header id="top-of-screen" class="app-header">
+                <div class="logo-block">
+                    <span class="logo-badge" aria-hidden="true">WB</span>
+                    <div>
+                        <p class="logo-tag">Word assistant</p>
+                        <h1 id="title">Wordle Bot</h1>
+                    </div>
+                </div>
+                <nav class="header-actions" aria-label="Tools">
+                    <button type="button" class="header-btn header-btn-help" id="help-btn" onclick="toggleHelpPage(); return false;" title="How it works">
+                        <span class="btn-icon" aria-hidden="true">?</span>
+                        <span class="btn-label">Help</span>
+                    </button>
+                    <button type="button" class="header-btn header-btn-settings" onclick="toggleSettingsPage();" title="Settings">
+                        <span class="btn-icon" aria-hidden="true">⚙</span>
+                        <span class="btn-label">Settings</span>
+                    </button>
+                    <button type="button" class="header-btn header-btn-benchmark" onclick="toggleBenchmarkPage();" title="Benchmark openers">
+                        <span class="btn-icon" aria-hidden="true">▣</span>
+                        <span class="btn-label">Benchmark</span>
+                    </button>
+                </nav>
+            </header>
+
+            <div class="workspace">
+                <p id="board-intro" class="board-intro">
+                    <strong>Wordle Bot</strong> is a free <strong>Wordle solver</strong> and word-game assistant.
+                    Enter each guess you played, match the green and yellow tiles, and this Wordle helper narrows the
+                    remaining answers and ranks the best next guesses—without playing the puzzle for you.
+                </p>
+                <section id="guesses" class="panel panel-board">
+                    <div class="panel-top">
+                        <h2 class="panel-label">Your clues</h2>
+                        <button type="button" id="refresh" class="link-btn" onclick="resetBoard();">Clear board</button>
+                    </div>
+                    <ol class="steps-hint">
+                        <li>Type your guess and match tile colors</li>
+                        <li>Tap <strong>Best next guess</strong> to update suggestions</li>
+                    </ol>
+                    <input type="text" id="word-entered" class="guess-input" autocomplete="off" spellcheck="false" aria-label="Your guess">
+                    <div id="hints" class="tile-rack empty"></div>
+                    <div id="next-previous-buttons" class="cta-row"></div>
+                </section>
+
+                <aside id="suggestions" class="panel panel-insights">
+                    <h2 class="possibilities total stat-line"></h2>
+                    <p class="possibilities separated stat-sub"></p>
+
+                    <div id="starter-guesses" class="starter-guesses">
+                        <h3 class="mini-title panel-label">Top opening guesses</h3>
+                        <div class="best-guesses"><ul class="word-list"></ul></div>
+                    </div>
+
+                    <div id="answer-pools" class="answer-pools" hidden>
+                        <section class="pool-panel pool-likely is-open">
+                            <button type="button" class="pool-toggle" data-pool="likely" aria-expanded="true">
+                                <span class="pool-toggle-label">Probable answers</span>
+                                <span class="pool-toggle-icon" aria-hidden="true">▼</span>
+                            </button>
+                            <div class="pool-words"></div>
+                        </section>
+                        <section class="pool-panel pool-unlikely">
+                            <button type="button" class="pool-toggle" data-pool="unlikely" aria-expanded="false">
+                                <span class="pool-toggle-label">Unlikely possibilities</span>
+                                <span class="pool-toggle-icon" aria-hidden="true">▶</span>
+                            </button>
+                            <div class="pool-words" hidden></div>
+                        </section>
+                    </div>
+
+                    <div id="insights-extra" class="insights-extra"></div>
+                </aside>
+            </div>
+
+            <section id="odds-mount" class="panel panel-odds" hidden aria-live="polite"></section>
+
+            <footer class="app-footer">
+                Inspired by <a href="https://github.com/ybenhayun/wordlebot" target="_blank" rel="noopener">wordlebot</a>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>
