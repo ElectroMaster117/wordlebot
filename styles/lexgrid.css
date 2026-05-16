@@ -256,12 +256,22 @@ body.modal-open .app-frame {
     color: var(--ink-soft);
 }
 
+.board-intro-extra {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+}
+
 .board-intro a {
     color: var(--brand);
 }
 
 @media (min-width: 768px) {
     .workspace .board-intro {
+        grid-column: 1 / -1;
+    }
+    .workspace .board-intro-extra {
         grid-column: 1 / -1;
     }
 }
